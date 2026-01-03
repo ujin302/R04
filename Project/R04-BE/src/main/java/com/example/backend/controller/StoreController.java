@@ -18,15 +18,43 @@ public class StoreController {
     private StoreService storeService;
 
     @PostMapping("/info")
-    public ResponseEntity<Map> postMethodName() {
+    public ResponseEntity<Map> info() {
+        System.out.println("info 호출");
         storeService.saveStoreInfo();
 
         return null;
     }
 
-    @GetMapping("/gettest")
-    public boolean getMethodName() {
-        return true;
+    @PostMapping("/juso")
+    public ResponseEntity<Map> juso() {
+        System.out.println("juso 호출");
+        storeService.updateJuso();
+
+        return null;
     }
+
+    @PostMapping("/thread/juso")
+    public ResponseEntity<Map> threadJuso() {
+        System.out.println("thread juso 호출");
+        storeService.threadUpdateJuso();
+
+        return null;
+    }
+
+    @PostMapping("/callable/juso")
+    public ResponseEntity<Map> callableJuso() {
+        System.out.println("callable juso 호출");
+        storeService.callableUpdateJuso();
+
+        return null;
+    }
+
+//    @PostMapping("/test")
+//    public ResponseEntity<Map> jusotest() {
+//        System.out.println("jusotest 호출");
+//        storeService.test();
+//
+//        return null;
+//    }
 
 }

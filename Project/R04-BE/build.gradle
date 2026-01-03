@@ -21,6 +21,18 @@ configurations {
 }
 
 repositories {
+	maven { url "https://download.osgeo.org/webdav/geotools/" }
+
+	// GeoTools
+	maven {
+		url "https://repo.osgeo.org/repository/release/"
+	}
+
+	// JAI
+	maven {
+		url "https://repo.osgeo.org/repository/thirdparty/"
+	}
+
 	mavenCentral()
 }
 
@@ -35,7 +47,11 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
 	implementation 'com.googlecode.json-simple:json-simple:1.1'
+	implementation 'org.geotools:gt-main:29.2'
+	implementation 'org.geotools:gt-referencing:29.2'
+	implementation 'org.geotools:gt-epsg-hsql:29.2'
 }
+
 
 tasks.named('test') {
 	useJUnitPlatform()

@@ -37,6 +37,12 @@ public class StoreEntity {
     private boolean payGmoney = false; // 지역 화폐
 
     // 주소
+    @Column(name = "addr_road_list", length = 1000)
+    private String addrRoadList; // 주소 Open API를 통해 추출한 도로명 주소
+
+    @Column(name = "addr_lot_list", length = 1000)
+    private String addrLotList; // 주소 Open API를 통해 추출한 지번주소
+
     @Column(name = "addr_road", length = 250)
     private String addrRoad; // 도로명 주소
 

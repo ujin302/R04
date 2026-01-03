@@ -19,6 +19,6 @@ import lombok.Setter;
 public class GMoneyRootJsonDto {
 
     @JsonProperty("RegionMnyFacltStus")
-    // private List<Map<String, Object>> regionJsonDtos;
     private List<GMoneyRegionJsonDto> regionJsonDtos;
+
 }

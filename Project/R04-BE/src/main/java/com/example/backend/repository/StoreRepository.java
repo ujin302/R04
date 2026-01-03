@@ -5,7 +5,10 @@ import org.springframework.stereotype.Repository;
 
 import com.example.backend.entity.StoreEntity;
 
+import java.util.List;
+
 @Repository
 public interface StoreRepository extends JpaRepository<StoreEntity, Integer> {
 
+    List<StoreEntity> findByLatIsNullAndLngIsNull();
 }
