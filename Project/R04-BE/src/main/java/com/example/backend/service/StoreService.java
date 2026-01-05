@@ -11,17 +11,33 @@ import java.util.concurrent.Future;
 
 import com.example.backend.dto.*;
 import com.example.backend.entity.StoreEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.repository.StoreRepository;
 
 @Service
+@Slf4j
 public class StoreService {
 
     @Autowired
     private StoreRepository storeRepository;
 
+    @Autowired
+    private AsyncService asyncService;
+
+    // 시간 출력
+    private String currentTime() {
+        LocalDateTime n = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
+        String time = n.format(formatter);
+
+        return time;
+    }
+
+    // 지역화폐 & 온누리상품권 가맹점 저장
     public void saveStoreInfo() {
         OpenAPIService openAPIService = new OpenAPIService();
         List<StoreEntity> entityList = new ArrayList<>();
@@ -49,6 +65,7 @@ public class StoreService {
         storeRepository.saveAll(entityList);
     }
 
+    // Ver1. 주소 업데이트
     public void updateJuso() {
         OpenAPIService openAPIService = new OpenAPIService();
         List<StoreEntity> entityList = storeRepository.findByLatIsNullAndLngIsNull();
@@ -63,25 +80,42 @@ public class StoreService {
             }
         }
 
-        System.out.println("updateJuso 업데이트 대상: " + String.valueOf(c));
+        log.info("updateJuso 업데이트 대상: " + String.valueOf(c));
     }
 
-    private String currentTime() {
-        LocalDateTime n = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
-        String time = n.format(formatter);
+    // 주소 업데이트 작업 (Async 구현을 위해 반복되는 부분 함수화)
+    private List<StoreEntity> finallyStore(List<StoreEntity> entityList) {
+        log.info("finallyStore 시작 " + currentTime());
+        OpenAPIService openAPIService = new OpenAPIService();
+        List<StoreEntity> resultList = new ArrayList<>();
 
-        return time;
+        for(StoreEntity entity : entityList) {
+            log.info("작업 대상 >> " + entity.getId() + " / " + entity.getAddrLot() + " / " + entity.getAddrRoad());
+            StoreEntity tempEntity = openAPIService.getJusoRootData(entity);
+
+            if(tempEntity != null) {
+                log.info("Update 대상 >> " + tempEntity.getId() + " / " + tempEntity.getLat() + " / " + tempEntity.getLng());
+//                storeRepository.save(tempEntity); > 여기서 저장하면 오류 발생 활용 증가
+                resultList.add(tempEntity);
+            } else {
+                resultList.add(entity);
+            }
+        }
+
+        log.info("finallyStore 종료 " + currentTime());
+        return resultList;
     }
+
+    // Ver2. 주소 업데이트 > Thread 클래스 활용
     public void threadUpdateJuso() {
-        System.out.println("threadUpdateJuso 시작 " + currentTime());
+        log.info("threadUpdateJuso 시작 " + currentTime());
         List<StoreEntity> entityList = storeRepository.findByLatIsNullAndLngIsNull();
         int len = entityList.size();
 
         Thread th1 = new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("thred 1");
+                log.info("thred 1");
                 finallyStore(entityList.subList(0, len/2));
             }
         });
@@ -89,18 +123,19 @@ public class StoreService {
         Thread th2 = new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("thread 2");
+                log.info("thread 2");
                 finallyStore(entityList.subList(len/2, len));
             }
         });
 
         th1.start();
         th2.start();
-        System.out.println("threadUpdateJuso 종료 " + currentTime());
+        log.info("threadUpdateJuso 종료 " + currentTime());
     }
 
+    // Ver2. 주소 업데이트 > Callable 인터페이스 활용
     public void callableUpdateJuso() {
-        System.out.println("callableUpdateJuso 시작 " + currentTime());
+        log.info("callableUpdateJuso 시작 " + currentTime());
         // 함수의 목적: Callable 객체를 통해 비동기 구현함. 이를 통해, 처리 속도 감소
         List<StoreEntity> entityList = storeRepository.findByLatIsNullAndLngIsNull();
         int len = entityList.size();
@@ -110,7 +145,7 @@ public class StoreService {
             Callable<List<StoreEntity>> callable1 = new Callable<List<StoreEntity>>() {
                 @Override
                 public List<StoreEntity> call() throws Exception {
-                    System.out.println("Callable 1");
+                    log.info("Callable 1");
                     return finallyStore(entityList.subList(0, len/2));
                 }
             };
@@ -118,7 +153,7 @@ public class StoreService {
             Callable<List<StoreEntity>> callable2 = new Callable<List<StoreEntity>>() {
                 @Override
                 public List<StoreEntity> call() throws Exception {
-                    System.out.println("Callable 2");
+                    log.info("Callable 2");
                     return finallyStore(entityList.subList(len/2, len));
                 }
             };
@@ -144,28 +179,20 @@ public class StoreService {
             System.err.println("callableUpdateJuso >> " + e.getMessage());
         }
 
-        System.out.println("callableUpdateJuso 종료 " + currentTime());
+        log.info("callableUpdateJuso 종료 " + currentTime());
     }
-    private List<StoreEntity> finallyStore(List<StoreEntity> entityList) {
-        System.out.println("finallyStore 시작 " + currentTime());
-        OpenAPIService openAPIService = new OpenAPIService();
-        List<StoreEntity> resultList = new ArrayList<>();
 
-        for(StoreEntity entity : entityList) {
-            System.out.println("작업 대상 >> " + entity.getId() + " / " + entity.getAddrLot() + " / " + entity.getAddrRoad());
-            StoreEntity tempEntity = openAPIService.getJusoRootData(entity);
+    // Ver3. 주소 업데이트 > Async 클래스 생성 및 활용
+    @Async
+    public void asyncUpdateJuso() {
+        log.info("callableUpdateJuso Async 시작 " + currentTime());
+        List<StoreEntity> entityList = storeRepository.findByLatIsNullAndLngIsNull();
+        int len = entityList.size();
 
-            if(tempEntity != null) {
-                System.out.println("Update 대상 >> " + tempEntity.getId() + " / " + tempEntity.getLat() + " / " + tempEntity.getLng());
-//                storeRepository.save(tempEntity); > 여기서 저장하면 오류 발생 활용 증가
-                resultList.add(tempEntity);
-            } else {
-                resultList.add(entity);
-            }
-        }
+        asyncService.asyncFinallyStore(entityList.subList(0, len/2));
+        asyncService.asyncFinallyStore(entityList.subList(len/2, len));
+        log.info("callableUpdateJuso Async 종료 " + currentTime());
 
-        System.out.println("finallyStore 종료 " + currentTime());
-        return resultList;
     }
 
 }

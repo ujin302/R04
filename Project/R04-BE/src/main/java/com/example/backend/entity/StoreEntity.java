@@ -37,11 +37,11 @@ public class StoreEntity {
     private boolean payGmoney = false; // 지역 화폐
 
     // 주소
-    @Column(name = "addr_road_list", length = 1000)
-    private String addrRoadList; // 주소 Open API를 통해 추출한 도로명 주소
+//    @Column(name = "addr_road_list", length = 1000)
+//    private String addrRoadList; // 주소 Open API를 통해 추출한 도로명 주소
 
-    @Column(name = "addr_lot_list", length = 1000)
-    private String addrLotList; // 주소 Open API를 통해 추출한 지번주소
+//    @Column(name = "addr_lot_list", length = 1000)
+//    private String addrLotList; // 주소 Open API를 통해 추출한 지번주소
 
     @Column(name = "addr_road", length = 250)
     private String addrRoad; // 도로명 주소
@@ -53,13 +53,13 @@ public class StoreEntity {
     private String zipcode; // 우편번호
 
     @Column(name = "sido", length = 30)
-    private String sido; // 시도 Ex. 서울시 or 경기도
+    private String sido; // 시도 Ex) 서울시 or 경기도
 
     @Column(name = "sigungu", length = 50)
-    private String sigungu; // 시군구 Ex. 강남구 or 부천시 오정구
+    private String sigungu; // 시군구 Ex) 강남구 or 부천시 오정구
 
     @Column(name = "eupmyeon", length = 50)
-    private String eupmyeon; // 읍면동 Ex. 서초동 or 오정동
+    private String eupmyeon; // 읍면동 Ex) 서초동 or 오정동
 
     // 좌표
     @Column(name = "lat")

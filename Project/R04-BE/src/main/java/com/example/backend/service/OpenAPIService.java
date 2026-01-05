@@ -1,4 +1,5 @@
 package com.example.backend.service;
+import lombok.extern.slf4j.Slf4j;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.referencing.CRS;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -11,8 +12,12 @@ import java.util.*;
 import com.example.backend.dto.*;
 import com.example.backend.entity.StoreEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Service;
 
+@Service
+@Slf4j
 public class OpenAPIService {
+
 
     // 지역화폐 Open API 호출
     private GMoneyRootJsonDto getGMoneyJson(int idx, int size) {
@@ -71,7 +76,7 @@ public class OpenAPIService {
             GMoneyRootJsonDto rootJsonDto = null;
             rootJsonDto = getGMoneyJson(1, 1);
             Long count = rootJsonDto.getRegionJsonDtos().get(0).getHeadJsonDto().get(0).getCount();
-            System.out.println("Total Count: " + count); // 414050
+            log.info("Total Count: " + count); // 414050
 
             // 2. 각 가맹점 데이터 추출
             // repeatIdx 만큼 API 호출 (한번에 최대 1000건까지 조회 가능)
@@ -137,7 +142,7 @@ public class OpenAPIService {
         try {
             // 1. 가맹점 개수 추출
             int totalCount = getOnnuriJson(1,1).getTotalCount();
-            System.out.println("Total Count: " + totalCount);
+            log.info("Total Count: " + totalCount);
 
             // 2. 각 가맹점 데이터 추출
             OnnuriRootJsonDto rootJsonDto = new OnnuriRootJsonDto();
@@ -199,72 +204,6 @@ public class OpenAPIService {
 
     }
 
-    // 주소 정보 가져오기
-    public StoreEntity getJusoRootData(StoreEntity storeEntity) {
-        try {
-            int count = 0;
-            JusoRootJsonDto rootJsonDto = null;
-            List<JusoDataJsonDto> jusoDataJsonDtolist = null;
-            JusoDataJsonDto resultJusoDataDto = null; // 최종 상세 주소 정보 저장
-
-            String jibun = storeEntity.getAddrLot().split("번지")[0].replace("번지", "");
-            System.out.println("가공한 지번주소: " + jibun);
-
-            // 상세 주소 Open API 호출
-            // 추출방법 1순위. 도로명 주소 -> 도로명 주소 + 지번 정확하게 일치 조건 만족
-            if(storeEntity.getAddrRoad() != null) {
-                System.out.println("추출방법 1순위. 도로명 주소");
-                rootJsonDto = getJusoRootJson(1, 100, storeEntity.getAddrRoad());
-                count = rootJsonDto.getJusoResultJsonDto().getJusoCommonJsonDto().getTotalCount();
-                jusoDataJsonDtolist = rootJsonDto.getJusoResultJsonDto().getJusoDataJsonDto(); // 주소 상세 정보 리스트 저장
-                System.out.println("Total Count: " + count + " / 검색 주소: " + jibun);
-                
-                // 도로명 주소 + 지번 정확하게 일치 조건 만족
-                for(JusoDataJsonDto dto : jusoDataJsonDtolist) {
-                    if(dto.getJibunAddr().equals(jibun) && dto.getRoadAddrPart2().equals(storeEntity.getAddrRoad())) {
-                        resultJusoDataDto = dto;
-
-                        break;
-                    }
-                }
-            }
-            
-            // 추출방법 2순위. 지번 주소 -> 지번이랑 정확하게 일치 조건 만족
-            if(resultJusoDataDto == null && storeEntity.getAddrLot() != null){
-                System.out.println("추출방법 2순위. 지번 주소");
-                rootJsonDto = getJusoRootJson(1, 100, jibun);
-                count = rootJsonDto.getJusoResultJsonDto().getJusoCommonJsonDto().getTotalCount();
-                jusoDataJsonDtolist = rootJsonDto.getJusoResultJsonDto().getJusoDataJsonDto(); // 주소 상세 정보 리스트 저장
-                System.out.println("Total Count: " + count + " / 검색 주소: " + storeEntity.getAddrLot());
-
-                // 도로명 주소 + 지번 정확하게 일치 조건 만족
-                for(JusoDataJsonDto dto : jusoDataJsonDtolist) {
-                    if(dto.getJibunAddr().equals(jibun)) {
-                        resultJusoDataDto = dto;
-
-                        break;
-                    }
-                }
-            }
-
-            // 추출방법 3순위. 만약 없을 경우, 예외 발생
-            if (resultJusoDataDto == null) {
-                throw new Exception("데이터 없음");
-            }
-
-            // 최종 JusoDataJsonDto를 통해, 경도 & 위도 구하는 함수
-            Map<String, Double> resultMap = getPosition(resultJusoDataDto);
-            storeEntity.setLng(resultMap.get("lng")); // 경도
-            storeEntity.setLat(resultMap.get("lat")); // 위도
-
-            return storeEntity;
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-            return null;
-        }
-
-    }
-
     // 좌표 Open API 호출
     public CoordinatesRootJsonDto getCoordinateRootJson(JusoDataJsonDto jusoDataJsonDto) {
         StringBuilder result = new StringBuilder();
@@ -274,9 +213,9 @@ public class OpenAPIService {
             String apiUrl = "https://business.juso.go.kr/addrlink/addrCoordApi.do";
 
             // 추출 데이터 >> JusoDataJsonDto
-            // admCd : 행정구역코드
-            // rnMgtSn : 도로명코드
-            // udrtYn : 지하여부 (0:지상, 1:지하)
+            // admCd    : 행정구역코드
+            // rnMgtSn  : 도로명코드
+            // udrtYn   : 지하여부 (0:지상, 1:지하)
             // buldMnnm : 건물본번
             // buldSlno : 건물부번 (부번이 없는 경우 0)
             String type = java.net.URLEncoder.encode("json", encode);
@@ -308,13 +247,13 @@ public class OpenAPIService {
 
             ObjectMapper mapper = new ObjectMapper();
             CoordinatesRootJsonDto rootJsonDto = mapper.readValue(result.toString(), CoordinatesRootJsonDto.class);
-            System.out.println("CoordinatesRootJsonDto > TotalCount: " + rootJsonDto.getResultsJsonDto().getCommonJsonDto().getTotalCount());
+            log.info("CoordinatesRootJsonDto > TotalCount: " + rootJsonDto.getResultsJsonDto().getCommonJsonDto().getTotalCount());
 
             
             return rootJsonDto;
         }
         catch (Exception e) {
-            System.err.println(e.getMessage());
+            log.error(e.getMessage());
             return null;
         }
 
@@ -344,8 +283,8 @@ public class OpenAPIService {
             // 3) 변환 실행
             transform.transform(srcPos, dstPos);
 
-            System.out.println("경도(lng) = " + dstPos.getX());
-            System.out.println("위도(lat) = " + dstPos.getY());
+            log.info("경도(lng) = " + dstPos.getX());
+            log.info("위도(lat) = " + dstPos.getY());
 
             // 4) 결과 저장
             resultMap.put("lng", dstPos.getX());
@@ -357,4 +296,100 @@ public class OpenAPIService {
         }
 
     }
+
+    // 주소 정보을 바탕으로 부족한 정보 채우기
+    public StoreEntity getJusoRootData(StoreEntity storeEntity) {
+        try {
+            int count = 0;
+            JusoRootJsonDto rootJsonDto = null;
+            List<JusoDataJsonDto> jusoDataJsonDtolist = null;
+            JusoDataJsonDto resultJusoDataDto = null; // 최종 상세 주소 정보 저장
+
+            String jibun = storeEntity.getAddrLot().split("번지")[0].replace("번지", "");
+            log.info("가공한 지번주소: " + jibun);
+
+            // 상세 주소 Open API 호출
+            // 추출방법 1순위. 도로명 주소 -> 도로명 주소 + 지번 정확하게 일치 조건 만족
+            if(storeEntity.getAddrRoad() != null) {
+                log.info("추출방법 1순위. 도로명 주소");
+                rootJsonDto = getJusoRootJson(1, 100, storeEntity.getAddrRoad());
+                count = rootJsonDto.getJusoResultJsonDto().getJusoCommonJsonDto().getTotalCount();
+
+                if(count > 0) {
+                    jusoDataJsonDtolist = rootJsonDto.getJusoResultJsonDto().getJusoDataJsonDto(); // 주소 상세 정보 리스트 저장
+                    log.info("Total Count: " + count + " / 검색 주소: " + jibun);
+
+                    // 도로명 주소 + 지번 정확하게 일치 조건 만족
+                    for(JusoDataJsonDto dto : jusoDataJsonDtolist) {
+                        if(dto.getJibunAddr().equals(jibun) && dto.getRoadAddrPart2().equals(storeEntity.getAddrRoad())) {
+                            resultJusoDataDto = dto;
+
+                            break;
+                        }
+                    }
+                } else {
+                    log.info("Total Count: 0");
+                }
+            }
+
+            // 추출방법 2순위. 지번 주소 -> 지번이랑 정확하게 일치 조건 만족
+            if(resultJusoDataDto == null && storeEntity.getAddrLot() != null){
+                log.info("추출방법 2순위. 지번 주소");
+                rootJsonDto = getJusoRootJson(1, 100, jibun);
+                count = rootJsonDto.getJusoResultJsonDto().getJusoCommonJsonDto().getTotalCount();
+
+                if(count > 0) {
+                    jusoDataJsonDtolist = rootJsonDto.getJusoResultJsonDto().getJusoDataJsonDto(); // 주소 상세 정보 리스트 저장
+                    log.info("Total Count: " + count + " / 검색 주소: " + storeEntity.getAddrLot());
+
+                    // 도로명 주소 + 지번 정확하게 일치 조건 만족
+                    for(JusoDataJsonDto dto : jusoDataJsonDtolist) {
+                        if(dto.getJibunAddr().equals(jibun)) {
+                            resultJusoDataDto = dto;
+
+                            break;
+                        }
+                    }
+                } else {
+                    log.info("Total Count: 0");
+                }
+            }
+
+            // 추출방법 3순위. 만약 없을 경우, 예외 발생
+            if (resultJusoDataDto == null) {
+                throw new Exception("데이터 없음");
+            }
+
+            // 최종 JusoDataJsonDto를 통해, 경도 & 위도 구하는 함수
+            Map<String, Double> resultMap = getPosition(resultJusoDataDto);
+            storeEntity.setLng(resultMap.get("lng")); // 경도
+            storeEntity.setLat(resultMap.get("lat")); // 위도
+            if(storeEntity.getAddrRoad() == null && resultJusoDataDto.getRoadAddrPart1() != null) {
+                storeEntity.setAddrRoad(resultJusoDataDto.getRoadAddrPart1());
+            }
+            if(storeEntity.getAddrLot() == null && resultJusoDataDto.getJibunAddr() != null) {
+                storeEntity.setAddrLot(resultJusoDataDto.getJibunAddr());
+            }
+            if(storeEntity.getZipcode() == null && resultJusoDataDto.getZipNo() != null) {
+                storeEntity.setZipcode(resultJusoDataDto.getZipNo());
+            }
+            if(storeEntity.getSido() == null && resultJusoDataDto.getSiNm() != null) {
+                storeEntity.setSido(resultJusoDataDto.getSiNm());
+            }
+            if(storeEntity.getSigungu() == null && resultJusoDataDto.getSggNm() != null) {
+                storeEntity.setSigungu(resultJusoDataDto.getSggNm());
+            }
+            if(storeEntity.getEupmyeon() == null && resultJusoDataDto.getEmdNm() != null) {
+                storeEntity.setSigungu(resultJusoDataDto.getSggNm());
+            }
+
+            log.info(storeEntity.toString());
+            return storeEntity;
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return storeEntity;
+        }
+
+    }
+
 }

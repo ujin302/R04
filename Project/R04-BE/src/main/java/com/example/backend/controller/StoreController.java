@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.service.StoreService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/store")
 public class StoreController {
     @Autowired
@@ -19,7 +21,7 @@ public class StoreController {
 
     @PostMapping("/info")
     public ResponseEntity<Map> info() {
-        System.out.println("info 호출");
+        log.info("info 호출");
         storeService.saveStoreInfo();
 
         return null;
@@ -27,7 +29,7 @@ public class StoreController {
 
     @PostMapping("/juso")
     public ResponseEntity<Map> juso() {
-        System.out.println("juso 호출");
+        log.info("juso 호출");
         storeService.updateJuso();
 
         return null;
@@ -35,7 +37,7 @@ public class StoreController {
 
     @PostMapping("/thread/juso")
     public ResponseEntity<Map> threadJuso() {
-        System.out.println("thread juso 호출");
+        log.info("thread juso 호출");
         storeService.threadUpdateJuso();
 
         return null;
@@ -43,18 +45,18 @@ public class StoreController {
 
     @PostMapping("/callable/juso")
     public ResponseEntity<Map> callableJuso() {
-        System.out.println("callable juso 호출");
+        log.info("callable juso 호출");
         storeService.callableUpdateJuso();
 
         return null;
     }
 
-//    @PostMapping("/test")
-//    public ResponseEntity<Map> jusotest() {
-//        System.out.println("jusotest 호출");
-//        storeService.test();
-//
-//        return null;
-//    }
+    @PostMapping("/callable/juso/asnyc")
+    public ResponseEntity<Map> asyncJuso() {
+        log.info("callable Async juso 호출");
+        storeService.asyncUpdateJuso();
+
+        return null;
+    }
 
 }

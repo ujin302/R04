@@ -17,6 +17,6 @@ public class CoordinatesCommonJsonDto {
     private int totalCount;
 
     @JsonProperty("errorCode")
-    private int errorCode;
+    private Object errorCode; // int, string 둘다 들어옴...
 
 }
